@@ -1,8 +1,9 @@
 # =============================================================================
 # read_kpi: le e junta todos os meses ja baixados de um KPI
 #
-# Le os parquet salvos em out_dir/<kpi>/*.parquet e concatena num unico
+# Le os parquet salvos em out_dir/<out_name>/*.parquet e concatena num unico
 # data frame -- assim voce nunca precisa juntar meses "na mao".
+# (out_name vem de kpi_folder(kpi), ex.: "KPI04_KEP" para "kpi04".)
 #
 # Requer: arrow, fs, purrr, dplyr
 # =============================================================================
@@ -18,7 +19,7 @@ library(dplyr)
 # -----------------------------------------------------------------------------
 read_kpi <- function(kpi, out_dir, from = NULL, to = NULL) {
 
-  dir <- fs::path(out_dir, kpi)
+  dir <- fs::path(out_dir, kpi_folder(kpi))
   if (!fs::dir_exists(dir))
     stop(sprintf("Sem dados para '%s' em %s", kpi, dir))
 

@@ -48,14 +48,24 @@ for (k in names(kpi_specs)) download_kpi(k, 2025, 1, out_dir = OUT_DIR)
 df <- read_kpi("kpi04", OUT_DIR)
 ```
 
-Saída no destino:
+Saída no destino (a pasta vem de `out_name` no spec):
 
 ```
-<OUT_DIR>/kpi04/2025-01.parquet
-<OUT_DIR>/kpi04/2025-01.csv
-<OUT_DIR>/kpi04/2025-02.parquet
+<OUT_DIR>/KPI04_KEP/2025-01.parquet
+<OUT_DIR>/KPI04_KEP/2025-01.csv
+<OUT_DIR>/KPI04_KEP/2025-02.parquet
 ...
+<OUT_DIR>/KPI05_KEA/2025-01.parquet
 ```
+
+Nomes de pasta por KPI (campo `out_name` em `R/kpi_specs.R`):
+
+| KPI interno | pasta de saída |
+|-------------|----------------|
+| kpi04       | `KPI04_KEP`    |
+| kpi05       | `KPI05_KEA`    |
+| kpi08       | `KPI08`        |
+| kpi17       | `KPI17`        |
 
 ## Adicionar um KPI novo
 
@@ -63,6 +73,7 @@ Basta acrescentar um item em `R/kpi_specs.R` — sem tocar na engine:
 
 ```r
 kpiXX = list(
+  out_name     = "KPIXX",           # nome da PASTA de saída
   endpoint     = "kpiXX",           # caminho após /api/
   time_field   = "time",            # nome do parâmetro de tempo
   query_fields = c("orig", "dest"), # campos de filtro por aeroporto

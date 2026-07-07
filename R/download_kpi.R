@@ -24,7 +24,7 @@ download_kpi <- function(kpi, year, month, out_dir,
                          ...) {
 
   stamp   <- sprintf("%04d-%02d", year, month)
-  pq_path <- fs::path(out_dir, kpi, paste0(stamp, ".parquet"))
+  pq_path <- fs::path(out_dir, kpi_folder(kpi), paste0(stamp, ".parquet"))
 
   if (!overwrite && fs::file_exists(pq_path)) {
     message(sprintf("Ja existe %s %s -- pulando (overwrite=TRUE para refazer).",

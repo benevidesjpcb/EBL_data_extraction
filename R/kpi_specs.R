@@ -7,6 +7,9 @@
 #
 # Campos do spec:
 #   endpoint     : caminho apos /api/  (ex.: "kpi04", "kpi05_cat62")
+#   out_name     : nome da PASTA de saida no destino (ex.: "KPI04_KEP").
+#                  Separa o nome interno (usado na URL) do nome da pasta.
+#                  Se ausente, usa a propria chave do KPI (ex.: "kpi04").
 #   time_field   : nome do parametro de tempo na query (ex.: "time", "aldt")
 #   query_fields : campos usados no filtro por aeroporto (um request por campo)
 #   group_size   : tamanho do grupo de aeroportos por request (Inf = todos juntos)
@@ -27,6 +30,7 @@
 kpi_specs <- list(
 
   kpi04 = list(
+    out_name     = "KPI04_KEP",
     endpoint     = "kpi04",
     time_field   = "time",
     query_fields = c("orig", "dest"),
@@ -36,6 +40,7 @@ kpi_specs <- list(
   ),
 
   kpi05 = list(
+    out_name     = "KPI05_KEA",
     endpoint     = "kpi05_cat62",
     time_field   = "time",
     query_fields = c("plan_dep", "real_arr", "plan_arr"),
@@ -45,6 +50,7 @@ kpi_specs <- list(
   ),
 
   kpi08 = list(
+    out_name     = "KPI08",
     endpoint     = "kpi08",
     time_field   = "aldt",
     query_fields = c("ades"),
@@ -54,6 +60,7 @@ kpi_specs <- list(
   ),
 
   kpi17 = list(
+    out_name     = "KPI17",
     endpoint     = "kpi17_cat62",
     time_field   = "time",
     query_fields = c("plan_dep"),
@@ -63,3 +70,12 @@ kpi_specs <- list(
     limit        = 10000
   )
 )
+
+# -----------------------------------------------------------------------------
+# kpi_folder(kpi): nome da pasta de saida para um KPI.
+# Usa spec$out_name; se ausente, a propria chave (ex.: "kpi04").
+# -----------------------------------------------------------------------------
+kpi_folder <- function(kpi) {
+  nm <- kpi_specs[[kpi]]$out_name
+  if (is.null(nm)) kpi else nm
+}
