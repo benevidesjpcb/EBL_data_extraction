@@ -35,7 +35,8 @@ extract <- function(year, config,
                     kpis            = names(config$kpis),
                     months          = 1:12,
                     overwrite       = FALSE,
-                    refresh_current = TRUE) {
+                    refresh_current = TRUE,
+                    verbose         = TRUE) {
 
   this_year  <- as.integer(format(Sys.Date(), "%Y"))
   this_month <- as.integer(format(Sys.Date(), "%m"))
@@ -59,17 +60,19 @@ extract <- function(year, config,
         next
       }
 
-      cat(sprintf("  %s: baixando ... ", stamp))
-      df <- .fetch_month(kpi, year, m, config)
+      cat(sprintf("  %s: baixando (dia: registros)...\n", stamp))
+      t0 <- Sys.time()
+      df <- .fetch_month(kpi, year, m, config, verbose = verbose)
+      secs <- round(as.numeric(difftime(Sys.time(), t0, units = "secs")))
 
       # mes vazio (API fora do ar ou sem dado) -> NAO grava, tenta de novo depois
       if (nrow(df) == 0) {
-        cat("0 linhas (nada gravado)\n")
+        cat(sprintf("  %s: 0 linhas (nada gravado, %ds)\n", stamp, secs))
         next
       }
 
       .write_files(df, folder, stamp, config$formats)
-      cat(sprintf("%d linhas salvas\n", nrow(df)))
+      cat(sprintf("  %s: %d linhas salvas (%ds)\n", stamp, nrow(df), secs))
     }
   }
   invisible(NULL)
@@ -80,7 +83,11 @@ extract <- function(year, config,
 # =============================================================================
 
 # --- baixa UM mes da API (loop de dias + retry + parse) ----------------------
-.fetch_month <- function(kpi, year, month, config, timeout = 120) {
+#   timeout   : timeout por requisicao, em segundos (default 60)
+#   max_tries : tentativas por requisicao (default 4)
+#   verbose   : imprime progresso por dia (default TRUE)
+.fetch_month <- function(kpi, year, month, config,
+                         timeout = 60, max_tries = 4, verbose = TRUE) {
 
   spec <- config$kpis[[kpi]]
 
@@ -93,16 +100,18 @@ extract <- function(year, config,
             else split(config$airports,
                        ceiling(seq_along(config$airports) / gsize))
 
-  # uma requisicao, com retry (503 PGRST002 e timeout) e parse
+  # uma requisicao, com retry (503 PGRST002 e timeout) e parse.
+  # backoff limitado a ~8s por tentativa para nao emperrar o mes inteiro
+  # quando a API esta instavel (falha rapido e segue).
   fetch_one <- function(url) {
     tryCatch({
       resp <- request(url) |>
         req_timeout(timeout) |>
         req_retry(
-          max_tries        = 6,
+          max_tries        = max_tries,
           retry_on_failure = TRUE,
           is_transient     = ~ resp_status(.x) %in% c(429, 500, 502, 503),
-          backoff          = ~ min(2 ^ .x, 60)
+          backoff          = ~ min(2 ^ .x, 8)
         ) |>
         req_perform()
 
@@ -135,7 +144,9 @@ extract <- function(year, config,
       }) |>
       unlist()
 
-    urls |> map(fetch_one) |> compact() |> bind_rows()
+    df_d <- urls |> map(fetch_one) |> compact() |> bind_rows()
+    if (verbose) cat(sprintf("      %s: %d\n", d0, nrow(df_d)))
+    df_d
   }
 
   df <- dates |> map(fetch_day) |> compact() |> bind_rows()
