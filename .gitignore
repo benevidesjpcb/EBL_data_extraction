@@ -1,0 +1,12 @@
+# Dados crus vao para o SharePoint, NUNCA para o git
+data/
+dados_crus/
+*.parquet
+*.csv
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
