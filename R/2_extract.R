@@ -36,7 +36,22 @@ extract <- function(year, config,
                     months          = 1:12,
                     overwrite       = FALSE,
                     refresh_current = TRUE,
-                    verbose         = TRUE) {
+                    verbose         = TRUE,
+                    check_api       = TRUE) {
+
+  # --- pre-check: a API esta no ar? -----------------------------------------
+  # Evita varrer o mes inteiro (dezenas de requisicoes) quando a API do DECEA
+  # esta fora (HTTP 503 PGRST002). Uma unica requisicao leve resolve.
+  if (check_api) {
+    h <- .api_up(config, kpi = kpis[1])
+    if (!isTRUE(h$up)) {
+      cat(sprintf("\n*** API indisponivel (status: %s). %s ***\n",
+                  as.character(h$status), if (!is.null(h$msg)) h$msg else ""))
+      cat("Nada foi baixado. Tente novamente mais tarde.\n")
+      return(invisible(FALSE))
+    }
+    if (verbose) cat("API OK - iniciando extracao.\n")
+  }
 
   this_year  <- as.integer(format(Sys.Date(), "%Y"))
   this_month <- as.integer(format(Sys.Date(), "%m"))
@@ -81,6 +96,30 @@ extract <- function(year, config,
 # =============================================================================
 # HELPERS INTERNOS (voce nao precisa chamar diretamente)
 # =============================================================================
+
+# --- pre-check: a API responde? ----------------------------------------------
+# Faz UMA requisicao leve (limit=1). Retorna lista com $up (TRUE/FALSE),
+# $status (codigo HTTP) e $msg (corpo/erro). Status >= 500 ou falha de
+# conexao = fora do ar.
+.api_up <- function(config, kpi = names(config$kpis)[1], timeout = 30) {
+  spec <- config$kpis[[kpi]]
+  url  <- paste0(config$base_url, "/", spec$endpoint, "?limit=1")
+  tryCatch({
+    resp   <- request(url) |>
+      req_timeout(timeout) |>
+      req_error(is_error = ~ FALSE) |>   # nao lanca erro em HTTP >= 400
+      req_perform()
+    status <- resp_status(resp)
+    if (status >= 500) {
+      list(up = FALSE, status = status,
+           msg = substr(resp_body_string(resp), 1, 200))
+    } else {
+      list(up = TRUE, status = status, msg = NULL)
+    }
+  }, error = function(e) {
+    list(up = FALSE, status = NA, msg = conditionMessage(e))
+  })
+}
 
 # --- baixa UM mes da API (loop de dias + retry + parse) ----------------------
 #   timeout   : timeout por requisicao, em segundos (default 60)
